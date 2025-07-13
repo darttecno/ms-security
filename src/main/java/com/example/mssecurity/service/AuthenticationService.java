@@ -22,14 +22,15 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager; // Inyectado desde ApplicationConfig
 
     public AuthenticationResponse register(UserRequest request) {
-        // 0. Comprobar si el usuario ya existe
-        userRepository.findByUsername(request.getUsername()).ifPresent(user -> {
-            throw new UserAlreadyExistsException("El nombre de usuario '" + user.getUsername() + "' ya está en uso.");
+        // 0. Comprobar si el username o el email ya existen
+        userRepository.findByUsernameOrEmail(request.getUsername(), request.getEmail()).ifPresent(user -> {
+            throw new UserAlreadyExistsException("El username '" + request.getUsername() + "' o el email '" + request.getEmail() + "' ya están en uso.");
         });
 
         // 1. Crea un nuevo objeto UserEntity con los datos del request
         var user = new UserEntity();
         user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
         // 2. ¡MUY IMPORTANTE! Codifica la contraseña antes de guardarla
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         // 3. Guarda el nuevo usuario en la base de datos
@@ -42,15 +43,17 @@ public class AuthenticationService {
 
     public AuthenticationResponse login(AuthenticationRequest request) {
         // 1. Autentica al usuario con el gestor de Spring Security.
+        //    Usa el campo 'login' que puede ser username o email.
         //    Si las credenciales son incorrectas, lanzará una excepción automáticamente.
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
+                        request.getLogin(),
                         request.getPassword()
                 )
         );
         // 2. Si la autenticación fue exitosa, busca al usuario en la base de datos
-        var user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+        //    Buscamos por username o email para obtener el objeto UserDetails completo.
+        var user = userRepository.findByUsernameOrEmail(request.getLogin(), request.getLogin()).orElseThrow();
         // 3. Genera y devuelve un token para el usuario
         var jwtToken = jwtService.generateToken(user);
         return AuthenticationResponse.builder().token(jwtToken).build();

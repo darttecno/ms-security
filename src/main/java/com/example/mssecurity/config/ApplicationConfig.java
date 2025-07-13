@@ -19,11 +19,12 @@ public class ApplicationConfig {
 
     private final UserRepository userRepository;
 
-    // Le dice a Spring Security cómo buscar a un usuario
+    // Le dice a Spring Security cómo buscar a un usuario.
+    // El parámetro 'username' aquí puede ser tanto el username como el email.
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return username -> userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado con: " + username));
     }
 
     // Proporciona el AuthenticationProvider, que une el userDetailsService y el passwordEncoder
