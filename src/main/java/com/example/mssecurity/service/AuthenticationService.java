@@ -5,6 +5,7 @@ import com.example.mssecurity.domain.model.AuthenticationRequest;
 import com.example.mssecurity.domain.model.AuthenticationResponse;
 import com.example.mssecurity.domain.model.UserRequest;
 import com.example.mssecurity.domain.repository.UserRepository;
+import com.example.mssecurity.exception.UserAlreadyExistsException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,6 +22,11 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager; // Inyectado desde ApplicationConfig
 
     public AuthenticationResponse register(UserRequest request) {
+        // 0. Comprobar si el usuario ya existe
+        userRepository.findByUsername(request.getUsername()).ifPresent(user -> {
+            throw new UserAlreadyExistsException("El nombre de usuario '" + user.getUsername() + "' ya está en uso.");
+        });
+
         // 1. Crea un nuevo objeto UserEntity con los datos del request
         var user = new UserEntity();
         user.setUsername(request.getUsername());
