@@ -39,35 +39,45 @@ public class AuthenticationService {
         
         // <-- CAMBIO: Guarda el usuario y obtén la instancia con el ID asignado por la BD
         var savedUser = userRepository.save(user);
-        
-        // <-- CAMBIO: Prepara los claims (datos extra) para el token
+
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", savedUser.getId());
-        
-        // <-- CAMBIO: Genera el token pasando los claims extra
+
         var jwtToken = jwtService.generateToken(extraClaims, savedUser);
-        
-        return AuthenticationResponse.builder().token(jwtToken).build();
+        var refreshToken = jwtService.generateRefreshToken(savedUser);
+
+        savedUser.getRefreshTokens().add(refreshToken);
+        userRepository.save(savedUser);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     public AuthenticationResponse login(AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getLogin(),
+                        request.getUsername(),
                         request.getPassword()
                 )
         );
         
-        var user = userRepository.findByUsernameOrEmail(request.getLogin(), request.getLogin()).orElseThrow();
-        
-        // <-- CAMBIO: Prepara los claims (datos extra) para el token
+        var user = userRepository.findByUsernameOrEmail(request.getUsername(), request.getUsername()).orElseThrow();
+
         Map<String, Object> extraClaims = new HashMap<>();
         extraClaims.put("userId", user.getId());
-        
-        // <-- CAMBIO: Genera el token pasando los claims extra
+
         var jwtToken = jwtService.generateToken(extraClaims, user);
-        
-        return AuthenticationResponse.builder().token(jwtToken).build();
+        var refreshToken = jwtService.generateRefreshToken(user);
+
+        user.getRefreshTokens().add(refreshToken);
+        userRepository.save(user);
+
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 
     public Optional<UserEntity> getUserById(Long id) {
@@ -76,5 +86,50 @@ public class AuthenticationService {
 
     public List<UserEntity> getAllUsers() {
         return userRepository.findAll();
+    }
+
+    public List<UserEntity> getAuthenticatedUsers() {
+        return userRepository.findByRefreshTokensIsNotEmpty();
+    }
+
+    public AuthenticationResponse refreshToken(String refreshToken) {
+        final String username = jwtService.extractUsername(refreshToken);
+        UserEntity user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (jwtService.isRefreshTokenValid(refreshToken, user) && user.getRefreshTokens().contains(refreshToken)) {
+            // Invalida el refresh token antiguo
+            user.getRefreshTokens().remove(refreshToken);
+
+            // Genera nuevos tokens
+            Map<String, Object> extraClaims = new HashMap<>();
+            extraClaims.put("userId", user.getId());
+            var newAccessToken = jwtService.generateToken(extraClaims, user);
+            var newRefreshToken = jwtService.generateRefreshToken(user);
+
+            // Guarda el nuevo refresh token
+            user.getRefreshTokens().add(newRefreshToken);
+            userRepository.save(user);
+
+            return AuthenticationResponse.builder()
+                    .token(newAccessToken)
+                    .refreshToken(newRefreshToken)
+                    .build();
+        } else {
+            throw new RuntimeException("Invalid Refresh Token");
+        }
+    }
+
+    public void logout(String refreshToken) {
+        final String username = jwtService.extractUsername(refreshToken);
+        UserEntity user = userRepository.findByUsernameOrEmail(username, username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRefreshTokens().contains(refreshToken)) {
+            user.getRefreshTokens().remove(refreshToken);
+            userRepository.save(user);
+        } else {
+            throw new RuntimeException("Refresh Token not found for user");
+        }
     }
 }

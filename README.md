@@ -54,6 +54,14 @@ mvn spring-boot:run
 
 La aplicación se iniciará y estará disponible en `http://localhost:8080`.
 
+### 4. Ejecutar Pruebas
+
+Para ejecutar las pruebas unitarias y de integración del proyecto, utiliza el siguiente comando de Maven:
+
+```bash
+mvn test
+```
+
 ## 🧪 Probar la API
 
 El proyecto incluye una colección de Postman (`postman_collection.json`) con ejemplos de las solicitudes a los endpoints de la API. Puedes importarla en Postman para probar fácilmente el registro, la autenticación y las demás funcionalidades.

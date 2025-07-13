@@ -44,4 +44,20 @@ public class AuthenticationController {
             return ResponseEntity.ok(authenticationService.getAllUsers());
         }
     }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthenticationResponse> refreshToken(@RequestBody String refreshToken) {
+        return ResponseEntity.ok(authenticationService.refreshToken(refreshToken));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody String refreshToken) {
+        authenticationService.logout(refreshToken);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/authenticated-users")
+    public ResponseEntity<List<UserEntity>> getAuthenticatedUsers() {
+        return ResponseEntity.ok(authenticationService.getAuthenticatedUsers());
+    }
 }
