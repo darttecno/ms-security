@@ -1,5 +1,6 @@
 package com.example.mssecurity.service;
 
+import aj.org.objectweb.asm.commons.Remapper;
 import com.example.mssecurity.domain.entity.UserEntity;
 import com.example.mssecurity.domain.model.AuthenticationRequest;
 import com.example.mssecurity.domain.model.AuthenticationResponse;
@@ -13,7 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -65,5 +68,13 @@ public class AuthenticationService {
         var jwtToken = jwtService.generateToken(extraClaims, user);
         
         return AuthenticationResponse.builder().token(jwtToken).build();
+    }
+
+    public Optional<UserEntity> getUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    public List<UserEntity> getAllUsers() {
+        return userRepository.findAll();
     }
 }
